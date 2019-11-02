@@ -6,4 +6,5 @@ MAX_LENGTH = 2500
 MODEL_DIR = '/path/to/repo/saved_models/'
 
 DATA_DIR = '/media/stack/Storage/Documents/datasets/VAERS/'
+VOCAB_DIR = './vocab/'
 TRAINING_DATA = 'w266_full_data.csv'
