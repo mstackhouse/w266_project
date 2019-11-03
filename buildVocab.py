@@ -9,7 +9,31 @@ from sklearn.feature_extraction.text import CountVectorizer
 
 from constants import *
 
-def build_vocab(outfile=None):
+# Create a custom analyzer for the the vectorizer object
+class CustAnalyzer():
+    
+    def __init__(self, mask_dates):
+        # Steal the defaul preprocessor and tokenizer from sklearn
+        v = CountVectorizer()
+        if mask_dates:
+            self.preprocess = lambda x: self.dat.sub('<DATE>', x.lower())
+        else:
+            self.preprocess = v.build_preprocessor()
+        self.tokenize = v.build_tokenizer()
+        self.is_num = re.compile(r'\b\d+\b') # isolated numbers
+        self.dat = re.compile(r'\b\d{1,2}[a-z]{3}\d{2,4}\b')
+        
+        
+    def __call__(self, doc):
+        # default clean and tokenize
+        doc_clean = self.preprocess(doc)
+        tokens = self.tokenize(doc_clean)
+        
+        # Return all tokens that aren't isolated numbers
+        filtered = [t for t in tokens if not self.is_num.match(t)]
+        return filtered[:MAX_LENGTH]
+        
+def build_vocab(outfile=None, mask_dates=False):
     # Import the dataset
     print(f'Reading data {DATA_DIR}{TRAINING_DATA}...')
     data = pd.read_csv(f'{DATA_DIR}{TRAINING_DATA}')
@@ -17,30 +41,10 @@ def build_vocab(outfile=None):
     # Get the corpus
     corpus = data.SYMPTOM_TEXT.dropna()
 
-    # Create a custom analyzer for the the vectorizer object
-    class CustAnalyzer():
-        
-        def __init__(self):
-            # Steal the defaul preprocessor and tokenizer from sklearn
-            v = CountVectorizer()
-            self.preprocess = v.build_preprocessor()
-            self.tokenize = v.build_tokenizer()
-            self.is_num = re.compile(r'\b\d+\b') # isolated numbers
-            self.dat = re.compile(r'^\d{1,2}[a-z]{3}\d{2,4}$')
-            
-        def __call__(self, doc):
-            # default clean and tokenize
-            doc_clean = self.preprocess(doc)
-            tokens = self.tokenize(doc_clean)
-            
-            # Return all tokens that aren't isolated numbers
-            return [t for t in tokens if not self.is_num.match(t)]
-            # TODO: Incorporate a standard date replacement
-
     # Create the vectorizer
     vectorizer = CountVectorizer(
         min_df = 3, 
-        analyzer=CustAnalyzer(), 
+        analyzer=CustAnalyzer(mask_dates), 
         binary=True
     )
 
@@ -50,9 +54,9 @@ def build_vocab(outfile=None):
 
     if outfile:
         print(f'Found {len(vectorizer.vocabulary_.keys())}) tokens')
-        print(f'Writing out to {VOCAB_DIR}vocab.csv...')
+        print(f'Writing out to {VOCAB_DIR}{outfile}...')
         with open(f'{VOCAB_DIR}{outfile}', 'w') as vocab_file:
             for word in vectorizer.vocabulary_.keys():
                 vocab_file.write(word + "\n")
     
-    return vectorizer.vocabulary_
+    return vectorizer.vocabulary_, vectorizer
