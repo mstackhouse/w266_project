@@ -1,0 +1,14 @@
+name: camlenv
+channels:
+  - defaults
+dependencies:
+  - python=3.6
+  - numpy=1.13
+  - scikit-learn=0.19.1
+  - pandas
+  - nltk=3.2.4
+  - pytorch=0.3.0
+  - cuda90
+  - tqdm
+prefix: /home/stack/anaconda3/envs/camlenv
+
