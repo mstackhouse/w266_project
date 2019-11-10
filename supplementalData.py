@@ -126,7 +126,7 @@ def get_wiki_desc(text, original_term=None):
                 # This shouldn't happen but this takes a while so I don't
                 # want a failure at term 10000
                 print(f"Disambiguation failed!!! Search term: {alt}")
-                print(f'Error: {e}')
+                print(f'\tError: {e}')
                 tracker['failed'] += 1
                 return original_term, original_term
                 
@@ -150,6 +150,11 @@ def get_wiki_desc(text, original_term=None):
             # Text was already trimmed or nothing to trim so search has failed
             tracker['failed'] += 1
             return original_term, original_term
+    except Exception as e:
+        print(f'Unexpected failure on term {original_term}')
+        print(f'\tError: {e}')
+        tracker['failed'] += 1
+        return original_term, original_term
 
 def build_supplemental_data(label_list, sent_detector=None):
     ''' Iterate a list of labels and assemble the 
