@@ -127,6 +127,8 @@ def get_wiki_desc(text, original_term=None):
                 # want a failure at term 10000
                 print(f"Disambiguation failed!!! Search term: {alt}")
                 print(f'Error: {e}')
+                tracker['failed'] += 1
+                return original_term, original_term
                 
         # Too ambiguous so stick with just returning the label
         else:
