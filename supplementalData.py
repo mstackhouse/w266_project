@@ -204,6 +204,7 @@ if __name__ == "__main__":
     # Calculate end time
     total_time = dt.datetime.now() - start_time
     # Report the tracker
+    print(' ' * 100)
     print('Data assembly complete')
     print(f"Total runtime: {str(total_time).split('.', 2)[0]}")
     print('Summary of search results:')
