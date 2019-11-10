@@ -7,6 +7,7 @@ import pandas as pd
 import zipfile
 import shutil
 from constants import *
+from sklearn.model_selection import ShuffleSplit
 
 if not os.path.isdir(RAW_DIR):
     RAW_DIR = input("Raw data directory: ")
@@ -91,7 +92,46 @@ versions = compiled.groupby(['VAERS_ID'])['VERSIONS'].agg('sum').reset_index()
 final = source.merge(codes, on='VAERS_ID')\
               .merge(versions, on='VAERS_ID')
 
+# Join the lists together
+final['SYMPTOMS'] = final.SYMPTOMS.apply(lambda x: ';'.join(x))
+final['VERSIONS'] = final.VERSIONS.apply(lambda x: ';'.join([str(y) for y in x]))
+
+# Write out
 print(f'Final dataset assembled. {final.shape[0]} records total.')
 print(f'Writing to {DATA_DIR}post_processed.csv...')
 final.to_csv(f'{DATA_DIR}post_processed.csv')
-print('Done.')
+
+# Create splits
+print('Creating Train/Test/Val splits...')
+
+# Create suffle split object
+splitter = ShuffleSplit(train_size=TRAIN_PROP, 
+                        test_size=TEST_PROP + VAL_PROP, 
+                        random_state=1234, 
+                        n_splits=1)
+
+# Split out the indices
+for train, test in splitter.split(final):
+    train_ind = train
+    devval_ind = test
+
+# Relative proportions of dev/val 
+test_prop = TEST_PROP / (TEST_PROP + VAL_PROP)
+val_prop = VAL_PROP / (TEST_PROP + VAL_PROP)
+
+# Split the test set from above again to get the dev and val sets
+splitter = ShuffleSplit(train_size=test_prop, 
+                        test_size=val_prop, 
+                        random_state=1234, 
+                        n_splits=1)
+
+# Split out the last two sets
+for test, val in splitter.split(devval_ind):
+    test_ind = devval_ind[test]
+    dev_ind = devval_ind[val]
+
+# Write out the datasets
+final.iloc[train_ind].to_csv(f'{DATA_DIR}/train.csv', index=False)
+final.iloc[test_ind].to_csv(f'{DATA_DIR}/test.csv', index=False)
+final.iloc[dev_ind].to_csv(f'{DATA_DIR}/dev.csv', index=False)
+
