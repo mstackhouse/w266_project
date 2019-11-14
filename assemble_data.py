@@ -6,8 +6,9 @@ import os
 import pandas as pd
 import zipfile
 import shutil
-from constants import *
 from sklearn.model_selection import ShuffleSplit
+from constants import *
+from buildVocab import CustAnalyzer
 
 if not os.path.isdir(RAW_DIR):
     RAW_DIR = input("Raw data directory: ")
@@ -62,44 +63,46 @@ def join_symptoms(row):
             out.append(row[f'SYMPTOM{i}'])
     return out
 
-def join_versions(row):
-    ''' Turns versions into a list in a single var '''
-    out = []
-    for i in range(1,6):
-        if not pd.isna(row[f'SYMPTOMVERSION{i}']):
-            out.append(row[f'SYMPTOMVERSION{i}'])
-    return out
-
 print('Post-processing...')
 # Map the listing functions
 compiled['SYMPTOMS'] = compiled.apply(join_symptoms,axis=1)
-compiled['VERSIONS'] = compiled.apply(join_versions,axis=1)
 
 # Get rid of the numbered variables and keep the subset
-compiled = compiled[['VAERS_ID', 'SYMPTOM_TEXT', 'SYMPTOMS', 'VERSIONS']]
+compiled = compiled[['VAERS_ID', 'SYMPTOM_TEXT', 'SYMPTOMS']]
 
 # Split off symptoms to merge into
 source = compiled[['VAERS_ID', 'SYMPTOM_TEXT']].copy()
 source.drop_duplicates(inplace=True) # We have duplicates here so remove
 
-print('Aggregating lists...')
+# Pre-process the symptom text
+tokenize = CustAnalyzer(mask_dates=True)
+source['TEXT'] = source.SYMPTOM_TEXT.apply(lambda x: ' '.join(tokenize(x)))
+
+print('Aggregating labels...')
 # Aggregate the code list
 codes = compiled.groupby(['VAERS_ID'])['SYMPTOMS'].agg('sum').reset_index()
-# Aggregate the version lists
-versions = compiled.groupby(['VAERS_ID'])['VERSIONS'].agg('sum').reset_index()
 
 # Merge into the final dataset
-final = source.merge(codes, on='VAERS_ID')\
-              .merge(versions, on='VAERS_ID')
+final = source.merge(codes, on='VAERS_ID')
 
 # Join the lists together
-final['SYMPTOMS'] = final.SYMPTOMS.apply(lambda x: ';'.join(x))
-final['VERSIONS'] = final.VERSIONS.apply(lambda x: ';'.join([str(y) for y in x]))
+final['LABELS'] = final.SYMPTOMS.apply(lambda x: ';'.join(x))
+
+# Keep only the variables I want
+final = final[['VAERS_ID', 'TEXT', 'LABELS']]
 
 # Write out
 print(f'Final dataset assembled. {final.shape[0]} records total.')
 print(f'Writing to {DATA_DIR}post_processed.csv...')
-final.to_csv(f'{DATA_DIR}post_processed.csv')
+final.to_csv(f'{DATA_DIR}post_processed.csv', index=False)
+
+# Record length for sorting purposes
+final['length'] = final.TEXT.apply(
+    lambda x: len(x.split() if not pd.isnull(x) else 0)
+    )
+
+# Filter out empty case reports
+final = final[final.length > 1]
 
 # Create splits
 print('Creating Train/Test/Val splits...')
@@ -131,7 +134,14 @@ for test, val in splitter.split(devval_ind):
     dev_ind = devval_ind[val]
 
 # Write out the datasets
-final.iloc[train_ind].to_csv(f'{DATA_DIR}/train.csv', index=False)
-final.iloc[test_ind].to_csv(f'{DATA_DIR}/test.csv', index=False)
-final.iloc[dev_ind].to_csv(f'{DATA_DIR}/dev.csv', index=False)
+train = final.iloc[train_ind]\
+    .sort_values(['length'])
+train.to_csv(f'{DATA_DIR}/train.csv', index=False)
 
+test = final.iloc[test_ind]\
+    .sort_values(['length'])
+test.to_csv(f'{DATA_DIR}/test.csv', index=False)
+
+dev = final.iloc[dev_ind]\
+    .sort_values(['length'])
+dev.to_csv(f'{DATA_DIR}/dev.csv', index=False)

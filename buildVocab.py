@@ -17,7 +17,7 @@ class CustAnalyzer():
         v = CountVectorizer()
         self.dat = re.compile(r'\b\d{1,2}\-?[a-z]{3}\-?\d{2,4}\b')
         if mask_dates:
-            self.preprocess = lambda x: self.dat.sub('<DATE>', x.lower())
+            self.preprocess = lambda x: self.dat.sub('<DATE>', str(x).lower())
         else:
             self.preprocess = v.build_preprocessor()
         self.tokenize = v.build_tokenizer()
