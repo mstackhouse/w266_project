@@ -39,7 +39,7 @@ def build_vocab(outfile=None, mask_dates=False):
     data = pd.read_csv(f'{DATA_DIR}{TRAINING_DATA}')
 
     # Get the corpus
-    corpus = data.SYMPTOM_TEXT.dropna()
+    corpus = data.TEXT.dropna()
 
     # Create the vectorizer
     vectorizer = CountVectorizer(
