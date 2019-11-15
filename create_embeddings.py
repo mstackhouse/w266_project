@@ -1,13 +1,17 @@
-import gensim
-import word_embeddings
 from collections import defaultdict
+import csv
+import gensim
+import pandas as pd
+import extract_wvs
+import word_embeddings
+import buildVocab
 from constants import *
 
 
 #Create file dictionary - Configure and update this to add additional files to embeddings
 #Key - full file path, value - index of text column
 files = {
-        f'{DATA_DIR}{train_split}': 1 #Training data
+        f'{DATA_DIR}{TRAINING_DATA}': 1 #Training data
         }
 embedding_name = 'train_only'
 
@@ -23,12 +27,16 @@ del(model)
 #Use vocabulary to create word vector matrix
 print('Create word vector matrix...')
 ind2w = defaultdict(str)
-vocab = set()
-with open(f'{VOCAB_DIR}'+'vocab.csv', 'r') as f:
-    for i, line in enumerate(f):
-        vocab.add(line.rstrip())
-ind2w = {i+1:w for i,w in enumerate(sorted(vocab))}
+vocab, vz = buildVocab.build_vocab(
+    outfile='vocab.csv', 
+    mask_dates=True)
 
+# Index to word dictionary
+ind2w = {i+1:w for i,w in enumerate(sorted(vocab))}
+# Flip it - word to index
+w2ind = {w:i for i,w in ind2w.items()}
+
+# Build the embedding lookup matrix
 W, words = extract_wvs.build_matrix(ind2w, wv)
 
 #Write out embeddings
@@ -39,3 +47,29 @@ with open(f'{DATA_DIR}{embedding_name}'+'.embed', 'w') as f:
         line.extend([str(d) for d in W[i]])
         f.write(" ".join(line) + "\n")
 
+# Move on to the description vectors
+print('Write description vectors with vocab')
+
+# Read in the supplemental data
+sup_data = pd.read_csv(f'{DATA_DIR}{SUPPLEMENTAL_DATA}', sep="\t")
+
+# Tokenize
+tokenizer = buildVocab.CustAnalyzer(mask_dates=True)
+sup_data['tokens'] = sup_data.desc.apply(lambda x: tokenizer(x))
+# Get index of each token
+sup_data['inds'] = sup_data.tokens.apply(
+    lambda tok: [w2ind[t] if t in w2ind.keys() else len(w2ind) + 1 for t in tok]
+)
+# Build the line to be used in the output file
+sup_data['out_line'] = sup_data.apply(
+    lambda x: [x.label] + x.inds,
+    axis=1
+)
+# Subset
+sup_data = sup_data[['out_line']]
+
+# Write out the description vectors
+with open(f'{DATA_DIR}description_vectors.vocab', 'w+') as f:
+    w = csv.writer(f, delimiter=' ')
+    w.writerow(['CODE', 'VECTOR'])
+    sup_data.out_line.apply(lambda x: w.writerow(x))
