@@ -136,12 +136,14 @@ for test, val in splitter.split(devval_ind):
 # Write out the datasets
 train = final.iloc[train_ind]\
     .sort_values(['length'])
-train.to_csv(f'{DATA_DIR}/train.csv', index=False)
+train.to_csv(f'{DATA_DIR}/train.csv')
 
 test = final.iloc[test_ind]\
     .sort_values(['length'])
-test.to_csv(f'{DATA_DIR}/test.csv', index=False)
+test.to_csv(f'{DATA_DIR}/test.csv')
 
 dev = final.iloc[dev_ind]\
     .sort_values(['length'])
-dev.to_csv(f'{DATA_DIR}/dev.csv', index=False)
+dev.to_csv(f'{DATA_DIR}/dev.csv')
+
+print('Done.')
