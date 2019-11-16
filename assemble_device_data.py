@@ -12,7 +12,6 @@ import zipfile
 import shutil
 import json
 import pandas as pd
-from constants import *
 from buildVocab import CustAnalyzer
 
 def extract_text(filename):
@@ -33,6 +32,9 @@ all_events = []
 device_data_dir = "/home/stack/Documents/datasets/DEVICE/" 
 if not os.path.exists:
     dev_data_dir = input("Location of device data: ")
+
+# Build tokenizer
+tokenize = CustAnalyzer(mask_dates=True, max_length=None)
 
 # Loop the zip archives
 for archive in tqdm(os.listdir(device_data_dir)):

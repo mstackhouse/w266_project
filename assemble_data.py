@@ -106,6 +106,8 @@ final['length'] = final.TEXT.apply(
 
 # Filter out empty case reports
 final = final[final.length > 1]
+# Filter out missing labels
+final = final[pd.notna(final.LABELS)]
 
 # Create splits
 print('Creating Train/Test/Val splits...')
