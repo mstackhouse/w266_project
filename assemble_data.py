@@ -1,5 +1,5 @@
 '''
-prep_data.py
+assemble_data.py
     Data assembly from raw sources
 '''
 import os
@@ -76,7 +76,10 @@ source.drop_duplicates(inplace=True) # We have duplicates here so remove
 
 # Pre-process the symptom text
 tokenize = CustAnalyzer(mask_dates=True)
+raw_tokenize = CustAnalyzer(mask_dates=True, max_length=None)
+
 source['TEXT'] = source.SYMPTOM_TEXT.apply(lambda x: ' '.join(tokenize(x)))
+source['RAW_TEXT'] = source.SYMPTOM_TEXT.apply(lambda x: ' '.join(raw_tokenize(x)))
 
 print('Aggregating labels...')
 # Aggregate the code list
@@ -89,7 +92,7 @@ final = source.merge(codes, on='VAERS_ID')
 final['LABELS'] = final.SYMPTOMS.apply(lambda x: ';'.join(x))
 
 # Keep only the variables I want
-final = final[['VAERS_ID', 'TEXT', 'LABELS']]
+final = final[['VAERS_ID', 'TEXT', 'LABELS', 'RAW_TEXT']]
 
 # Write out
 print(f'Final dataset assembled. {final.shape[0]} records total.')
@@ -132,6 +135,12 @@ splitter = ShuffleSplit(train_size=test_prop,
 for test, val in splitter.split(devval_ind):
     test_ind = devval_ind[test]
     dev_ind = devval_ind[val]
+
+# Spit out the raw training records for the vocab build and embedding
+# training
+final[['RAW_TEXT']].iloc[train_ind]\
+    .to_csv(f'{DATA_DIR}/train_raw.csv')
+final.drop(['RAW_TEXT'], axis=1, inplace=True)
 
 # Write out the datasets
 train = final.iloc[train_ind]\

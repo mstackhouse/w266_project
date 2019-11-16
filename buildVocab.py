@@ -12,9 +12,10 @@ from constants import *
 # Create a custom analyzer for the the vectorizer object
 class CustAnalyzer():
     
-    def __init__(self, mask_dates):
+    def __init__(self, mask_dates, max_length=MAX_LENGTH):
         # Steal the defaul preprocessor and tokenizer from sklearn
         v = CountVectorizer()
+        self.max_length = max_length
         self.dat = re.compile(r'\b\d{1,2}\-?[a-z]{3}\-?\d{2,4}\b')
         if mask_dates:
             self.preprocess = lambda x: self.dat.sub('<DATE>', str(x).lower())
@@ -31,20 +32,34 @@ class CustAnalyzer():
         
         # Return all tokens that aren't isolated numbers
         filtered = [t for t in tokens if not self.is_num.match(t)]
-        return filtered[:MAX_LENGTH]
-        
-def build_vocab(outfile=None, mask_dates=False):
-    # Import the dataset
-    print(f'Reading data {DATA_DIR}{TRAINING_DATA}...')
-    data = pd.read_csv(f'{DATA_DIR}{TRAINING_DATA}')
+        if self.max_length:
+            return filtered[:self.max_length]
+        else:
+            return filtered[:self.max_length]
+
+def build_vocab(filedict=None, outfile=None, mask_dates=False, max_length=MAX_LENGTH):
+    ''' Build up the vocab file from potentially multiple
+        sources 
+    '''
+
+    # initialize a series
+    corpus = pd.Series()
+
+    # Loop the dictionary
+    for file, column in filedict.items():
+        print(f'Reading data {file}')
+           # Read and pull off selected column
+        tmp = pd.read_csv(f'{DATA_DIR}{file}').iloc[:,column]
+        # Stack back to the main dataframe
+        corpus = corpus.append(tmp)
 
     # Get the corpus
-    corpus = data.TEXT.dropna()
+    corpus = corpus.dropna()
 
     # Create the vectorizer
     vectorizer = CountVectorizer(
         min_df = 3, 
-        analyzer=CustAnalyzer(mask_dates), 
+        analyzer=CustAnalyzer(mask_dates, max_length=max_length), 
         binary=True
     )
 

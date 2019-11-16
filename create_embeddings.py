@@ -11,9 +11,11 @@ from constants import *
 #Create file dictionary - Configure and update this to add additional files to embeddings
 #Key - full file path, value - index of text column
 files = {
-        f'{DATA_DIR}{TRAINING_DATA}': 1 #Training data
+        f'{DATA_DIR}train_raw.csv': 1 #Training data,
+        f'{DATA_DIR}device_data.csv': 1,
+        f'{DATA_DIR}wiki_data.csv': 1
         }
-embedding_name = 'train_only'
+embedding_name = 'train_device_wiki'
 
 #Train w2v embeddings (note: can be skipped if model already trained)
 print('Begin training embeddings...')
@@ -27,7 +29,9 @@ del(model)
 #Use vocabulary to create word vector matrix
 print('Create word vector matrix...')
 ind2w = defaultdict(str)
+
 vocab, vz = buildVocab.build_vocab(
+    filedict=filedict,
     outfile='vocab.csv', 
     mask_dates=True)
 
