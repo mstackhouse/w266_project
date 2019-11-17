@@ -11,7 +11,7 @@ from constants import *
 #Create file dictionary - Configure and update this to add additional files to embeddings
 #Key - full file path, value - index of text column
 files = {
-        f'{DATA_DIR}train_raw.csv': 1 #Training data,
+        f'{DATA_DIR}train_raw.csv': 1, #Training data
         f'{DATA_DIR}device_data.csv': 1,
         f'{DATA_DIR}wiki_data.csv': 1
         }
@@ -26,12 +26,12 @@ model = gensim.models.Word2Vec.load(w2v_file)
 wv = model.wv
 del(model)
 
-#Use vocabulary to create word vector matrix
-print('Create word vector matrix...')
+#Create Vocabulary
+print('Create vocabulary..')
 ind2w = defaultdict(str)
 
 vocab, vz = buildVocab.build_vocab(
-    filedict=filedict,
+    filedict=files,
     outfile='vocab.csv', 
     mask_dates=True)
 
@@ -41,6 +41,7 @@ ind2w = {i+1:w for i,w in enumerate(sorted(vocab))}
 w2ind = {w:i for i,w in ind2w.items()}
 
 # Build the embedding lookup matrix
+print('Build embedding matrix lookup...')
 W, words = extract_wvs.build_matrix(ind2w, wv)
 
 #Write out embeddings

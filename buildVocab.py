@@ -49,7 +49,7 @@ def build_vocab(filedict=None, outfile=None, mask_dates=False, max_length=MAX_LE
     for file, column in filedict.items():
         print(f'Reading data {file}')
            # Read and pull off selected column
-        tmp = pd.read_csv(f'{DATA_DIR}{file}').iloc[:,column]
+        tmp = pd.read_csv(f'{file}').iloc[:,column]
         # Stack back to the main dataframe
         corpus = corpus.append(tmp)
 
